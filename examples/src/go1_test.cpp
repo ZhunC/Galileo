@@ -1,4 +1,19 @@
 #include "go1_test.h"
+#include <Eigen/Dense>
+#include <fstream>
+#include <iostream>
+
+// Function to save Eigen::MatrixXd to a text file
+void saveMatrixToTextFile(const Eigen::MatrixXd& matrix, const std::string& filename) {
+    std::ofstream file(filename);
+    if (file.is_open()) {
+        file << matrix << "\n";
+	file.close();
+    } else {
+        std::cerr << "Unable to open file " << filename << "\n";
+    }
+}
+
 
 int main(int argc, char **argv)
 {
@@ -52,6 +67,7 @@ int main(int argc, char **argv)
     Eigen::MatrixXd new_inputs = Eigen::MatrixXd::Zero(solver_interface.states()->nu, new_times.size());
     // solver_interface.GetSolution(new_times, new_states, new_inputs);
     solver_interface.VisualizeSolutionAndConstraints(new_times, new_states, new_inputs);
-
+    saveMatrixToTextFile(new_states, "stateTraj.txt");
+    saveMatrixToTextFile(new_inputs, "controlTraj.txt");
     return 0;
 }
