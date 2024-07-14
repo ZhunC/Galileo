@@ -14,7 +14,74 @@ namespace galileo
     {
         namespace solution
         {
+            struct solution_segment_data_t
+        {
+            /**
+             * @brief A vector of times at which the state is evaluated for this segment.
+             *
+             */
+            Eigen::VectorXd state_times;
 
+            /**
+             * @brief The state solution for this segment.
+             *
+             */
+            Eigen::MatrixXd solx_segment;
+
+            /**
+             * @brief The degree of the state polynomial.
+             *
+             */
+            int state_degree;
+
+            /**
+             * @brief A vector of times at which the input is evaluated for this segment.
+             *
+             */
+            Eigen::VectorXd input_times;
+
+            /**
+             * @brief The input solution for this segment.
+             *
+             */
+            Eigen::MatrixXd solu_segment;
+
+            /**
+             * @brief The degree of the input polynomial.
+             *
+             */
+            int input_degree;
+
+            /**
+             * @brief The initial time of the segment.
+             *
+             */
+            double initial_time;
+
+            /**
+             * @brief The end time of the segment.
+             *
+             */
+            double end_time;
+
+            /**
+             * @brief The number of knots in the segment.
+             *
+             */
+            int num_knots;
+
+            /**
+             * @brief The state polynomial.
+             *
+             */
+            LagrangePolynomial state_poly;
+
+            /**
+             * @brief The input polynomial.
+             *
+             */
+            LagrangePolynomial input_poly;
+        };
             class PseudospectralTrajectorySolution : public casadi::Callback
             {
             public:
@@ -143,74 +210,7 @@ namespace galileo
          * @brief Struct for storing solution segment data.
          *
          */
-        struct solution_segment_data_t
-        {
-            /**
-             * @brief A vector of times at which the state is evaluated for this segment.
-             *
-             */
-            Eigen::VectorXd state_times;
-
-            /**
-             * @brief The state solution for this segment.
-             *
-             */
-            Eigen::MatrixXd solx_segment;
-
-            /**
-             * @brief The degree of the state polynomial.
-             *
-             */
-            int state_degree;
-
-            /**
-             * @brief A vector of times at which the input is evaluated for this segment.
-             *
-             */
-            Eigen::VectorXd input_times;
-
-            /**
-             * @brief The input solution for this segment.
-             *
-             */
-            Eigen::MatrixXd solu_segment;
-
-            /**
-             * @brief The degree of the input polynomial.
-             *
-             */
-            int input_degree;
-
-            /**
-             * @brief The initial time of the segment.
-             *
-             */
-            double initial_time;
-
-            /**
-             * @brief The end time of the segment.
-             *
-             */
-            double end_time;
-
-            /**
-             * @brief The number of knots in the segment.
-             *
-             */
-            int num_knots;
-
-            /**
-             * @brief The state polynomial.
-             *
-             */
-            LagrangePolynomial state_poly;
-
-            /**
-             * @brief The input polynomial.
-             *
-             */
-            LagrangePolynomial input_poly;
-        };
+        
 
         /**
          * @brief Class for storing and retrieving solutions.
