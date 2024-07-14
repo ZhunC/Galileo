@@ -85,7 +85,7 @@ namespace galileo
             class PseudospectralTrajectorySolution : public casadi::Callback
             {
             public:
-                PseudospectralTrajectorySolution(const std::vector<solution_segment_data_t> &segments_data)
+                PseudospectralTrajectorySolution(const std::vector<galileo::opt::solution::solution_segment_data_t> &segments_data)
                 {
                     segments_data_ = segments_data;
                 }
