@@ -16,11 +16,5 @@ using namespace tools;
 using namespace math;
 
 const std::string robot_location = "../resources/go1/urdf/go1.urdf";
-
-// This uses ipopt solver
-// const std::string solver_parameter_location = "../resources/go1/Parameters/solver_parameters.txt";
-
-// This uses snopt solver
-const std::string solver_parameter_location = "../resources/go1/Parameters/snopt_solver_param.txt";
-
+const std::string solver_parameter_location = "../resources/go1/Parameters/solver_parameters.txt";
 const std::string problem_parameter_location = "../resources/go1/Parameters/problem_parameters.txt";
