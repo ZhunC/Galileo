@@ -15,7 +15,7 @@ namespace galileo
         namespace solution
         {
             struct solution_segment_data_t
-        {
+        {    
             /**
              * @brief A vector of times at which the state is evaluated for this segment.
              *
@@ -140,7 +140,7 @@ namespace galileo
             private:
                 std::vector<solution_segment_data_t> segments_data_;
             };
-        };
+        
 
         /**
          * @brief Struct for storing a solution.
@@ -230,7 +230,7 @@ namespace galileo
              *
              * @param solution_segments A vector of solution segments.
              */
-            void UpdateSolution(std::vector<solution_segment_data_t> solution_segments);
+            void UpdateSolution(std::vector<galileo::opt::solution::solution_segment_data_t> solution_segments);
 
             enum AccessSolutionError
             {
@@ -309,7 +309,7 @@ namespace galileo
              * @brief The solution segments.
              *
              */
-            std::vector<solution_segment_data_t> solution_segments_;
+            std::vector<galileo::opt::solution::solution_segment_data_t> solution_segments_;
 
             /**
              * @brief The constraint data segments.
