@@ -300,6 +300,28 @@ namespace galileo
             return solution_interface_->GetSolution(query_times, state_result, input_result);
         }
 
+        void LeggedInterface::SetQDiag(const Eigen::VectorXd new_q_diag)
+        {
+            assert(new_q_diag.size() == cost_params_.Q_diag.size());
+            cost_params_.Q_diag = new_q_diag;
+        }
+
+        void LeggedInterface::SetRDiag(const Eigen::VectorXd new_r_diag)
+        {
+            assert(new_r_diag.size() == cost_params_.R_diag.size());
+            cost_params_.R_diag = new_r_diag;
+        }
+
+        void LeggedInterface::SetK(const double new_k)
+        {
+            cost_params_.terminal_weight = new_k;
+        }
+  
+        LeggedInterface::CostParameters LeggedInterface::getCostParameters()
+        {
+            return cost_params_;
+        }
+    
         casadi::Function LeggedInterface::GetTrajectory()
         {
             std::lock_guard<std::mutex> lock_sol(solution_mutex_);

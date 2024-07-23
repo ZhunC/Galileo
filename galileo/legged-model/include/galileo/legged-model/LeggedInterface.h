@@ -38,6 +38,13 @@ namespace galileo
 
             LeggedInterface(std::string sol_data_dir = "../examples/visualization/solution_data/", std::string plot_dir = "../examples/visualization/plots/");
 
+            struct CostParameters
+            {
+                Eigen::VectorXd Q_diag;
+                Eigen::VectorXd R_diag;
+                double terminal_weight = 1.0;
+            };
+
             /**
              * @brief Load the model from a file.
              */
@@ -99,6 +106,36 @@ namespace galileo
              * 
              * @return casadi::Function The solution trajectory function
              */
+            
+            void SetQDiag(const Eigen::VectorXd new_q_diag);
+            /**
+             * @brief Set the new q_diag to cost_params_
+             * 
+             * @return Nothing. Modifies the protected variable cost_params_ 
+             */
+            
+            void SetRDiag(const Eigen::VectorXd new_r_diag);
+            /**
+             * @brief Set the new r_diag to cost_params_
+             * 
+             * @return Nothing. Modifies the protected variable cost_params_ 
+             */
+
+            void SetK(const double new_k);
+            /**
+             * @brief Set the new k to cost_params_
+             * 
+             * @return Nothing. Modifies the protected variable cost_params_ 
+             */
+            
+
+            CostParameters getCostParameters();
+            /** 
+             * @brief Returns the protected variable cost_params_
+             * 
+             * @return Ccost_params_
+             */
+
             casadi::Function GetTrajectory();
 
             /**
@@ -221,12 +258,6 @@ namespace galileo
 
             std::string model_file_location_;
 
-            struct CostParameters
-            {
-                Eigen::VectorXd Q_diag;
-                Eigen::VectorXd R_diag;
-                double terminal_weight = 1.0;
-            };
             CostParameters cost_params_;
 
             constraints::JointLimits joint_limits_;
