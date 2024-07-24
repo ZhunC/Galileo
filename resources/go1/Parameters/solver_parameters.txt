@@ -15,4 +15,4 @@ constraints.footstep_vel_end|0|double
 constraints.ideal_footstep_duration|0.5|double
 
 solver|snopt|string
-nlp.snopt.Major iterations limit|100|int
+nlp.snopt.Major iterations limit|1000|int
