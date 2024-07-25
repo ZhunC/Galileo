@@ -290,14 +290,21 @@ namespace galileo
                 bool GetSolution(const Eigen::VectorXd &query_times, Eigen::MatrixXd &state_result, Eigen::MatrixXd &input_result, AccessSolutionError &sol_error) const;
 
                 /**
-                 * @brief Get the trajectory solution object.
+                 * @brief Get the trajectory solution as a Function callback object.
                  * 
                  * @return casadi::Function The trajectory solution object.
                  */
-                casadi::Function GetTrajectory() const
+                casadi::Function GetTrajectoryCallback() const
                 {
                     return *(std::shared_ptr<casadi::Function>(trajectory_solution_));
                 }
+
+                /**
+                 * @brief Get the trajectory solution as a pure Casadi Function object (serializable).
+                 * 
+                 * @return casadi::Function The trajectory solution object.
+                 */
+                casadi::Function GetTrajectoryFunction() const;
 
                 /**
                  * @brief Update the constraints with new constraint data segments.

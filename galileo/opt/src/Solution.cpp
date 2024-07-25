@@ -60,6 +60,87 @@ namespace galileo
                 return true;
             }
 
+            // Take an input t, and return the state and controls at that time
+            casadi::Function Solution::GetTrajectoryFunction() const
+            {
+                // Input time
+                casadi::SX t = casadi::SX::sym("t");
+
+                // Given a time t, find the phase we are in, then find the knot segment we are in, and then evaluate the polynomial at that time
+                // First, build the casadi expression for the individual knot segments for each phase
+                std::vector<casadi::Function> phase_functions;
+                for (size_t i = 0; i < solution_segments_.size(); ++i)
+                {
+                    casadi::Function phase_function;
+                    casadi::SXVector phase_expr;
+                    for (size_t j = 0; j < solution_segments_[i].num_knots; ++j)
+                    {
+                        // Get the state terms and input terms for this knot segment
+                        int state_deg = solution_segments_[i].state_degree + 1;
+                        Eigen::MatrixXd state_terms = solution_segments_[i].solx_segment.block(0, j * (state_deg), solution_segments_[i].solx_segment.rows(), state_deg);
+                        casadi::DM state_terms_dm;
+                        tools::eigenToCasadi(state_terms, state_terms_dm);
+                        casadi::SXVector state_terms_sxvector;
+                        for (size_t k = 0; k < state_terms_dm.columns(); ++k)
+                        {
+                            state_terms_sxvector.push_back(casadi::SX(state_terms_dm(casadi::Slice(0, state_terms_dm.rows()), k)));
+                        }
+                        casadi::SX state_knot_start_time = casadi::SX(solution_segments_[i].state_times[j * state_deg]);
+                        casadi::SX state_knot_end_time = casadi::SX(solution_segments_[i].state_times[(j * state_deg) + state_deg - 1]);
+                        casadi::SX state_scaled_time = (t - state_knot_start_time) / (state_knot_end_time - state_knot_start_time);
+                        casadi::SX state_interp_result = solution_segments_[i].state_poly.barycentricInterpolation(state_scaled_time, state_terms_sxvector);
+
+                        // Get the state terms and input terms for this knot segment
+                        int input_deg = solution_segments_[i].input_degree + 1;
+                        Eigen::MatrixXd input_terms = solution_segments_[i].solu_segment.block(0, j * (input_deg), solution_segments_[i].solu_segment.rows(), input_deg);
+                        casadi::DM input_terms_dm;
+                        tools::eigenToCasadi(input_terms, input_terms_dm);
+                        casadi::SXVector input_terms_sxvector;
+                        for (size_t k = 0; k < input_terms_dm.columns(); ++k)
+                        {
+                            input_terms_sxvector.push_back(casadi::SX(input_terms_dm(casadi::Slice(0, input_terms_dm.rows()), k)));
+                        }
+                        casadi::SX input_knot_start_time = casadi::SX(solution_segments_[i].input_times[j * input_deg]);
+                        casadi::SX input_knot_end_time = casadi::SX(solution_segments_[i].input_times[(j * input_deg) + input_deg - 1]);
+                        casadi::SX input_scaled_time = (t - input_knot_start_time) / (input_knot_end_time - input_knot_start_time);
+                        casadi::SX input_interp_result = solution_segments_[i].input_poly.barycentricInterpolation(input_scaled_time, input_terms_sxvector);
+
+                        casadi::SXVector knot_segment_state_input_pair = casadi::SXVector{state_interp_result, input_interp_result};
+
+                        if (j == 0)
+                        {
+                            phase_expr = knot_segment_state_input_pair;
+                        }
+                        else
+                        {
+                            phase_expr[0] = casadi::SX::if_else(t < state_knot_end_time, knot_segment_state_input_pair[0], phase_expr[0]);
+                            phase_expr[1] = casadi::SX::if_else(t < input_knot_end_time, knot_segment_state_input_pair[1], phase_expr[1]);
+                        }
+                    }
+                    phase_function = casadi::Function("phase_" + std::to_string(i) + "_solution_function", {t}, phase_expr);
+                    phase_functions.push_back(phase_function);
+                }
+
+                casadi::Function trajectory_function;
+                casadi::SXVector traj_expr;
+                for (size_t i = 0; i < solution_segments_.size(); ++i)
+                {
+                    casadi::SXVector phase_expr = phase_functions[i](t);
+                    if (i == 0)
+                    {
+                        traj_expr = phase_expr;
+                    }
+                    else
+                    {
+                        traj_expr[0] = casadi::SX::if_else(t < solution_segments_[i].end_time, phase_expr[0], traj_expr[0]);
+                        traj_expr[1] = casadi::SX::if_else(t < solution_segments_[i].end_time, phase_expr[1], traj_expr[1]);
+                    }
+                }
+
+                trajectory_function = casadi::Function("trajectory_solution_function", {t}, traj_expr);
+                return trajectory_function;
+            }
+
             void Solution::UpdateConstraints(std::vector<std::vector<galileo::opt::ConstraintData>> constarint_data_segments)
             {
                 constraint_data_segments_ = constarint_data_segments;

@@ -58,7 +58,7 @@ int main(int argc, char **argv)
     // solver_interface.GetSolution(new_times, new_states, new_inputs);
     // solver_interface.VisualizeSolutionAndConstraints(new_times, new_states, new_inputs);
 
-    casadi::Function solution = solver_interface.GetTrajectory();
+    casadi::Function solution = solver_interface.GetTrajectoryFunction();
     std::cout << solution << std::endl;
 
     auto tmp = solution(casadi::DM(0.5));

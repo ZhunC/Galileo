@@ -35,6 +35,15 @@ namespace galileo
              *
              * @param t Time to interpolate at
              * @param terms Terms at knot points to use for interpolation
+             * @return casadi::SX Interpolated value
+             */
+            casadi::SX barycentricInterpolation(casadi::SX t, const std::vector<casadi::SX> terms) const;
+
+            /**
+             * @brief Perform symbolic Lagrange Interpolation, which, given a time from the Lagrange time scale, interpolates terms to find the value at time t.
+             *
+             * @param t Time to interpolate at
+             * @param terms Terms at knot points to use for interpolation
              * @return Scalar Interpolated value
              */
             template <typename Scalar>

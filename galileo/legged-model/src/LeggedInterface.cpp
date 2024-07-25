@@ -322,10 +322,10 @@ namespace galileo
             return cost_params_;
         }
     
-        casadi::Function LeggedInterface::GetTrajectory()
+        casadi::Function LeggedInterface::GetTrajectoryFunction()
         {
             std::lock_guard<std::mutex> lock_sol(solution_mutex_);
-            return solution_interface_->GetTrajectory();
+            return solution_interface_->GetTrajectoryFunction();
         }
 
         void LeggedInterface::VisualizeSolutionAndConstraints(const Eigen::VectorXd &query_times, Eigen::MatrixXd &state_result, Eigen::MatrixXd &input_result)
