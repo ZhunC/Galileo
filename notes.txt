@@ -1,0 +1,1 @@
+Ran with Ipopt and max iter=50.

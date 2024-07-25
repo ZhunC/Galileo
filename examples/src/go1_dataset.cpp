@@ -15,7 +15,7 @@ std::vector<double> extractVector(const std::string& line) {
     size_t end = line.find(")|vector");
 
     if (start == std::string::npos || end == std::string::npos || start >= end) {
-        std::cerr << "Invalid format" << std::endl;
+        std::cerr << "Invalid format: vector" << std::endl;
         return result;
     }
 
@@ -31,6 +31,25 @@ std::vector<double> extractVector(const std::string& line) {
     }
 
     return result;
+}
+
+double extractDouble(const std::string& line) {
+    // Find the positions of the delimiters
+    size_t start = line.find("|");
+    size_t end = line.find("|double");
+
+    if (start == std::string::npos || end == std::string::npos || start >= end) {
+        std::cerr << "Invalid format: double" << std::endl;
+        return 0.0; // Return a default value or handle the error appropriately
+    }
+
+    // Extract the substring containing the double value
+    std::string doubleStr = line.substr(start + 1, end - (start + 1));
+
+    // Convert the extracted string to a double
+    double value = std::stod(doubleStr);
+
+    return value;
 }
 
 void saveCostParam(const std::string& filename, const galileo::legged::LeggedInterface::CostParameters& CP) {
@@ -55,9 +74,12 @@ int main(int argc, char **argv)
     std::vector<double> q0_vec;
     std::vector<double> qf_vec;
     Eigen::VectorXd test_q_diag(24);
+    Eigen::VectorXd test_r_diag(24);
+    double test_k;
+
     std::ifstream infile("/ros_ws/src/Galileo/resources/go1/Parameters/solver_parameters.txt");
     std::string line;
-    int dataset_size = 2;
+    int dataset_size = 3;
 
     if (infile.is_open()) {
         while (std::getline(infile, line)) {
@@ -65,7 +87,13 @@ int main(int argc, char **argv)
             if (line.find("cost.Q_diag|") != std::string::npos) {
                 std::vector<double> vec_q = extractVector(line);
                 test_q_diag = Eigen::Map<Eigen::VectorXd>(vec_q.data(), vec_q.size());
-                break;
+            }
+            if (line.find("cost.R_diag|") != std::string::npos) {
+                std::vector<double> vec_r = extractVector(line);
+                test_r_diag = Eigen::Map<Eigen::VectorXd>(vec_r.data(), vec_r.size());
+            }
+            if (line.find("cost.terminal_weight|") != std::string::npos) {
+                test_k = extractDouble(line);
             }
         }
         infile.close();
@@ -74,61 +102,80 @@ int main(int argc, char **argv)
     }
 
     // Define noise parameters
-    double noise_factor = 2.5;  // +- 250% noise
+    double noise_factor = 0.5;  // +- 50% noise
 
     // Random number generator for noise
     std::random_device rd;
     std::mt19937 gen(rd());
     std::normal_distribution<> d(0, 1);  // Mean 0, standard deviation 1
-    
-    for (int i = 0; i < dataset_size; ++i) {
-        // Vector to hold noisy results
-        Eigen::VectorXd noisy_vec_q = test_q_diag;
 
-        // Add noise to each entry
-        for (int i = 0; i < test_q_diag.size(); ++i) {
-            double magnitude = std::abs(test_q_diag[i]);
-            double noise = d(gen) * magnitude * noise_factor;
-            noisy_vec_q[i] = test_q_diag[i] + noise;
-        }
-        
-        std::cout << "Noisy Vector:\n" << noisy_vec_q << std::endl;
-        galileo::legged::helper::ReadProblemFromParameterFile(problem_parameter_location,
+    galileo::legged::helper::ReadProblemFromParameterFile(problem_parameter_location,
                                                             end_effector_names,
                                                             knot_num,
                                                             knot_time,
-                                                            contact_surfaces,
+                                                           contact_surfaces,
                                                             q0_vec,
                                                             qf_vec);
 
-        galileo::legged::LeggedInterface solver_interface;
+    galileo::legged::LeggedInterface solver_interface;
 
-        solver_interface.LoadModel(robot_location, end_effector_names);
-        solver_interface.LoadParameters(solver_parameter_location);
-        solver_interface.SetQDiag(noisy_vec_q);
+    solver_interface.LoadModel(robot_location, end_effector_names);
+    solver_interface.LoadParameters(solver_parameter_location); 
+    int nx = solver_interface.states()->nx;
+    int q_idx = solver_interface.states()->q_index;
 
-        int nx = solver_interface.states()->nx;
-        int q_idx = solver_interface.states()->q_index;
+    casadi::DM X0;
+    std::vector<double> X0_vec = galileo::legged::helper::getXfromq(solver_interface.states()->nx, q_idx, q0_vec);
+    galileo::tools::vectorToCasadi(X0_vec, nx, 1, X0);
 
-        casadi::DM X0;
-        std::vector<double> X0_vec = galileo::legged::helper::getXfromq(solver_interface.states()->nx, q_idx, q0_vec);
-        galileo::tools::vectorToCasadi(X0_vec, nx, 1, X0);
+    casadi::DM Xf;
+    std::vector<double> Xf_vec = galileo::legged::helper::getXfromq(solver_interface.states()->nx, q_idx, qf_vec);
+    galileo::tools::vectorToCasadi(Xf_vec, nx, 1, Xf);
 
-        casadi::DM Xf;
-        std::vector<double> Xf_vec = galileo::legged::helper::getXfromq(solver_interface.states()->nx, q_idx, qf_vec);
-        galileo::tools::vectorToCasadi(Xf_vec, nx, 1, Xf);
+    solver_interface.addSurface(environment::createInfiniteGround());
 
-        solver_interface.addSurface(environment::createInfiniteGround());
+    std::vector<uint> mask_vec = galileo::legged::helper::getMaskVectorFromContactSurfaces(contact_surfaces);
 
-        std::vector<uint> mask_vec = galileo::legged::helper::getMaskVectorFromContactSurfaces(contact_surfaces);
-
-        solver_interface.setContactSequence(
+    solver_interface.setContactSequence(
             knot_num,
             knot_time,
             mask_vec,
             contact_surfaces);
 
-        solver_interface.Initialize(X0, Xf);
+    solver_interface.Initialize(X0, Xf);
+    
+    for (int i = 0; i < dataset_size; ++i) {
+        // Vector to hold noisy results
+        Eigen::VectorXd noisy_vec_q = test_q_diag;
+        Eigen::VectorXd noisy_vec_r = test_r_diag;
+        double noisy_k = test_k;
+
+        // Add noise to each entry
+        for (int i = 0; i < test_q_diag.size(); ++i) {
+            double magnitude_q = std::abs(test_q_diag[i]);
+            double magnitude_r = std::abs(test_r_diag[i]);
+            double noise_q = d(gen) * magnitude_q * noise_factor;
+            double noise_r = d(gen) * magnitude_r * noise_factor;
+            noisy_vec_q[i] = test_q_diag[i] + noise_q;
+            noisy_vec_r[i] = test_q_diag[i] + noise_r;
+        }
+        double magnitude_k = std::abs(test_k);
+        double noise_k = d(gen) * magnitude_k * noise_factor;
+        noisy_k = test_k + noise_k;
+
+
+        // std::cout << "Noisy Vector:\n" << noisy_vec_q.transpose() << std::endl;
+
+        solver_interface.SetQDiag(noisy_vec_q);
+        solver_interface.SetRDiag(noisy_vec_r);
+        solver_interface.SetK(noisy_k);
+        std::cout << "Randomized K, Q, R: " << std::endl;
+        std::cout << "K: " << noisy_k << std::endl;
+        std::cout << "Q: " << noisy_vec_q.transpose() << std::endl;
+        std::cout << "R: " << noisy_vec_r.transpose() << std::endl;
+
+
+ 
         solver_interface.Update(X0, Xf);
 
         // Eigen::VectorXd new_times = Eigen::VectorXd::LinSpaced(250, 0., solver_interface.getRobotModel()->contact_sequence->getDT());
@@ -148,6 +195,11 @@ int main(int argc, char **argv)
         solution.save(solution_save_path);
         saveCostParam(costparam_save_path, costParam);
         std::cout << "Results saved in: " << costparam_save_path << std::endl;
+        std::cout << solution << std::endl;
+
+        auto tmp = solution(casadi::DM(0.5));
+        std::cout << tmp[0] << std::endl;
+        std::cout << tmp[1] << std::endl;
     }
 
     return 0;
