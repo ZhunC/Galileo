@@ -62,6 +62,34 @@ namespace galileo
             }
         }
 
+        casadi::SX LagrangePolynomial::barycentricInterpolation(casadi::SX t, const std::vector<casadi::SX> terms) const
+        {
+            if (piecewise_constant)
+            {
+                return terms[0];
+            }
+
+            // Compute the interpolated value
+            casadi::SX numerator = casadi::SX::zeros(terms[0].size1(), 1);
+            casadi::SX denominator = casadi::SX::zeros(terms[0].size1(), 1);
+            casadi::SX interpolant;
+            for (std::size_t i = 0; i < tau_root.size(); ++i)
+            {
+                interpolant = casadi::SX(barycentric_weights[i]) / (t - tau_root[i]);
+                numerator += interpolant * terms[i];
+                denominator += interpolant;
+            }
+            casadi::SX interp_expr = numerator / denominator;
+
+            casadi::SX result = interp_expr;
+            for (std::size_t i = 0; i < tau_root.size(); ++i)
+            {
+                result = casadi::SX::if_else(abs(t - tau_root[i]) < casadi::eps, terms[i], result);
+            }
+
+            return result;
+        }
+
         template <typename Scalar>
         Scalar LagrangePolynomial::barycentricInterpolation(double t, const std::vector<Scalar> terms) const
         {

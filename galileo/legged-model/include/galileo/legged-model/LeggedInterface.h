@@ -136,7 +136,7 @@ namespace galileo
              * @return Ccost_params_
              */
 
-            casadi::Function GetTrajectory();
+            casadi::Function GetTrajectoryFunction();
 
             /**
              * @brief Get the solution and plot the constraints
