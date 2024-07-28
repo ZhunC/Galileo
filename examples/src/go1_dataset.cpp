@@ -6,6 +6,7 @@
 #include <vector>
 #include <sstream>
 #include <Eigen/Dense>
+#include <ctime>
 
 std::vector<double> extractVector(const std::string& line) {
     std::vector<double> result;
@@ -79,7 +80,7 @@ int main(int argc, char **argv)
 
     std::ifstream infile("/ros_ws/src/Galileo/resources/go1/Parameters/solver_parameters.txt");
     std::string line;
-    int dataset_size = 3;
+    int dataset_size = 1;
 
     if (infile.is_open()) {
         while (std::getline(infile, line)) {
@@ -108,6 +109,7 @@ int main(int argc, char **argv)
     std::random_device rd;
     std::mt19937 gen(rd());
     std::normal_distribution<> d(0, 1);  // Mean 0, standard deviation 1
+    // need to clip above 1e-9 
 
     galileo::legged::helper::ReadProblemFromParameterFile(problem_parameter_location,
                                                             end_effector_names,
@@ -163,6 +165,13 @@ int main(int argc, char **argv)
         double noise_k = d(gen) * magnitude_k * noise_factor;
         noisy_k = test_k + noise_k;
 
+        // Define the minimum value
+        double min_value = 1e-9;
+
+        // Clip the vector
+        noisy_vec_q = noisy_vec_q.cwiseMax(min_value);
+        noisy_vec_r = noisy_vec_r.cwiseMax(min_value);
+        noisy_k = std::max(min_value, noisy_k);
 
         // std::cout << "Noisy Vector:\n" << noisy_vec_q.transpose() << std::endl;
 
@@ -174,9 +183,18 @@ int main(int argc, char **argv)
         std::cout << "Q: " << noisy_vec_q.transpose() << std::endl;
         std::cout << "R: " << noisy_vec_r.transpose() << std::endl;
 
+        // Get the start time
+        std::clock_t start = std::clock();
+
 
  
         solver_interface.Update(X0, Xf);
+        
+        // Get the end time
+        std::clock_t end = std::clock();
+
+        // Calculate the duration
+        double duration = double(end - start) / CLOCKS_PER_SEC;
 
         // Eigen::VectorXd new_times = Eigen::VectorXd::LinSpaced(250, 0., solver_interface.getRobotModel()->contact_sequence->getDT());
         // Eigen::MatrixXd new_states = Eigen::MatrixXd::Zero(solver_interface.states()->nx, new_times.size());
@@ -189,8 +207,10 @@ int main(int argc, char **argv)
 
         std::string base_save_path = "../dataset/Solution_function_";
         std::string base_struct_path = "../dataset/CostParam_";
+        std::string base_time_path = "../dataset/recorded_time_";
         std::string solution_save_path = base_save_path + std::to_string(i) + ".casadi";
         std::string costparam_save_path = base_struct_path + std::to_string(i) + ".txt";
+        std::string time_save_path = base_time_path + std::to_string(i) + ".txt";
 
         solution.save(solution_save_path);
         saveCostParam(costparam_save_path, costParam);
@@ -200,6 +220,29 @@ int main(int argc, char **argv)
         auto tmp = solution(casadi::DM(0.5));
         std::cout << tmp[0] << std::endl;
         std::cout << tmp[1] << std::endl;
+
+        // back check
+        // casadi::Function loaded_func = casadi::Function::load(solution_save_path);
+
+        // Use the loaded function
+        // auto tmp_check = solution(casadi::DM(0.5));
+        // std::cout << tmp_check[0] << std::endl;
+        // std::cout << tmp_check[1] << std::endl;
+
+        // Open the file
+        std::ofstream outFile(time_save_path);
+
+        if (outFile.is_open()) {
+            // Write the duration to the file
+            outFile << "Execution time: " << duration << " seconds" << std::endl;
+
+            // Close the file
+            outFile.close();
+
+            std::cout << "Time recorded and saved to " << time_save_path << std::endl;
+        } else {
+            std::cerr << "Error opening file for writing: " << time_save_path << std::endl;
+        }
     }
 
     return 0;

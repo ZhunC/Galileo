@@ -16,4 +16,4 @@ constraints.ideal_footstep_duration|0.5|double
 
 
 solver|snopt|string
-nlp.snopt.Major iterations limit|1000|int
+nlp.snopt.Major iterations limit|10|int
