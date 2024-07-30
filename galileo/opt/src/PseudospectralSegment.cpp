@@ -240,21 +240,20 @@ namespace galileo
             casadi::SX vcat_Uc = vertcat(Uc);
             casadi::SXVector function_inputs = {X0, vcat_dXc, dX0, U0, vcat_Uc};
 
-
             casadi::Function collocation_constraint = casadi::Function("feq",
-                                                           function_inputs,
-                                                           casadi::SXVector{vertcat(eq)}, opts);
+                                                                       function_inputs,
+                                                                       casadi::SXVector{vertcat(eq)}, opts);
 
             casadi::Function xf_constraint = casadi::Function("fxf",
-                                                  function_inputs,
-                                                  casadi::SXVector{dXf}, opts);
+                                                              function_inputs,
+                                                              casadi::SXVector{dXf}, opts);
 
             casadi::Function uf_constraint = casadi::Function("fuf",
-                                                  function_inputs,
-                                                  casadi::SXVector{uf}, opts);
+                                                              function_inputs,
+                                                              casadi::SXVector{uf}, opts);
 
             casadi::Function q_cost = casadi::Function("fxq", casadi::SXVector{Lc, X0, vcat_dXc, dX0, U0, vcat_Uc},
-                                           casadi::SXVector{Lc + Qf}, opts);
+                                                       casadi::SXVector{Lc + Qf}, opts);
 
             /*Implicit discrete-time equations*/
             collocation_constraint_map = collocation_constraint.map(knot_num, "openmp");
@@ -279,7 +278,7 @@ namespace galileo
             /*Map the constraint to each collocation point, and then map the mapped constraint to each knot segment*/
             for (size_t i = 0; i < G.size(); ++i)
             {
-                ConstraintData  g_data = G[i];
+                ConstraintData g_data = G[i];
 
                 assert(g_data.G.n_in() == 2 && "G must have 2 inputs");
                 g_data.G.assert_size_in(0, st_m->nx, 1);
@@ -288,9 +287,9 @@ namespace galileo
                 assert(g_data.lower_bound.n_out() == 1 && "G lower_bound must have 1 output");
                 g_data.lower_bound.assert_size_in(0, 1, 1);
                 casadi::Function tmap = casadi::Function(g_data.G.name() + "_map",
-                                             function_inputs,
-                                             casadi::SXVector{vertcat(g_data.G.map(dX_poly.d, "serial")((tmap_symbolic_input)))})
-                                .map(knot_num, "serial");
+                                                         function_inputs,
+                                                         casadi::SXVector{vertcat(g_data.G.map(dX_poly.d, "serial")((tmap_symbolic_input)))})
+                                            .map(knot_num, "serial");
                 general_constraint_maps.push_back(tmap);
                 ranges_G.push_back(tuple_size_t(N, N + tmap.size1_out(0) * tmap.size2_out(0)));
                 N += tmap.size1_out(0) * tmap.size2_out(0);
@@ -319,32 +318,13 @@ namespace galileo
             int Nuknot = st_m->nu * (knot_num + 1);
             int Nu = st_m->nu * (U_poly.d + 1) * knot_num + st_m->nu;
             int Nucol = Nu - Nuknot;
-            w0 = casadi::DM::zeros(Ndx + Nu, 1);
             general_lbw = -casadi::DM::inf(Ndx + Nu, 1);
             general_ubw = casadi::DM::inf(Ndx + Nu, 1);
 
             /*Transform initial guess for x to an initial guess for dx, using f_diff, the inverse of f_int*/
-            casadi::MX xkg_sym = casadi::MX::sym("xkg", st_m->nx, 1);
-            casadi::MX xckg_sym = casadi::MX::sym("Xckg", st_m->nx * dX_poly.d, 1);
             if (!Wdata->initial_guess.is_null())
             {
-                casadi::DM xg = Wdata->initial_guess.map(knot_num + 1, "serial")(knot_times).at(0);
-                casadi::Function dxg_func = casadi::Function("xg_fun", casadi::MXVector{xkg_sym}, casadi::MXVector{Fdiff(casadi::MXVector{x0_global, xkg_sym, 1.0}).at(0)})
-                                                .map(knot_num + 1, "serial");
-                w0(casadi::Slice(0, Ndxknot)) = casadi::DM::reshape(dxg_func(casadi::DMVector{xg}).at(0), Ndxknot, 1);
-                /*The transformation of xc to dxc is a slightly less trivial. While x_k = fint(x0_init, dx_k), for xc_k, we have xc_k = fint(x_k, dxc_k) which is equivalent to xc_k = fint(fint(x0_init, dx_k), dxc_k).
-                Thus, dxc_k = fdiff(fint(x0_init, dx_k), xc_k)). This could be done with maps like above, but it is not necessary.*/
-                casadi::DM xc_g = Wdata->initial_guess.map((dX_poly.d) * knot_num, "serial")(collocation_times).at(0);
-                for (casadi_int i = 0; i < knot_num; ++i)
-                {
-                    casadi::DM xk = xg(casadi::Slice(i * st_m->nx, (i + 1) * st_m->nx));
-                    casadi::DM xck = xc_g(casadi::Slice(i * st_m->nx * dX_poly.d, (i + 1) * st_m->nx * dX_poly.d));
-                    for (casadi_int j = 0; j < dX_poly.d; ++j)
-                    {
-                        w0(casadi::Slice(Ndxknot + i * st_m->ndx * dX_poly.d + j * st_m->ndx, Ndxknot + i * st_m->ndx * dX_poly.d + (j + 1) * st_m->ndx)) =
-                            reshape(Fdiff(casadi::DMVector{xk, xck(casadi::Slice(j * st_m->nx, (j + 1) * st_m->nx)), h}).at(0), st_m->ndx, 1);
-                    }
-                }
+                setInitialGuess(Wdata->initial_guess);
             }
 
             if (!Wdata->lower_bound.is_null() && !Wdata->upper_bound.is_null())
@@ -357,16 +337,11 @@ namespace galileo
                 // general_ubw(casadi::Slice(0, Ndxknot)) = casadi::DM::reshape(ubdx.map(knot_num + 1, "serial")(knot_times).at(0), Ndxknot, 1);
                 // general_lbw(casadi::Slice(Ndxknot, Ndx)) = casadi::DM::reshape(lbdx.map((dX_poly.d) * knot_num, "serial")(collocation_times).at(0), Ndxcol, 1);
                 // general_ubw(casadi::Slice(Ndxknot, Ndx)) = casadi::DM::reshape(ubdx.map((dX_poly.d) * knot_num, "serial")(collocation_times).at(0), Ndxcol, 1);
-                
+
                 general_lbw(casadi::Slice(0, Ndxknot)) = casadi::DM::reshape(Wdata->lower_bound.map(knot_num + 1, "serial")(knot_times).at(0), Ndxknot, 1);
                 general_ubw(casadi::Slice(0, Ndxknot)) = casadi::DM::reshape(Wdata->upper_bound.map(knot_num + 1, "serial")(knot_times).at(0), Ndxknot, 1);
                 general_lbw(casadi::Slice(Ndxknot, Ndx)) = casadi::DM::reshape(Wdata->lower_bound.map((dX_poly.d) * knot_num, "serial")(collocation_times).at(0), Ndxcol, 1);
                 general_ubw(casadi::Slice(Ndxknot, Ndx)) = casadi::DM::reshape(Wdata->upper_bound.map((dX_poly.d) * knot_num, "serial")(collocation_times).at(0), Ndxcol, 1);
-            }
-            if (!Wdata->initial_guess.is_null())
-            {
-                w0(casadi::Slice(Ndx, Ndx + Nuknot)) = casadi::DM::reshape(Wdata->initial_guess.map(knot_num + 1, "serial")(u_knot_times).at(1), Nuknot, 1);
-                w0(casadi::Slice(Ndx + Nuknot, Ndx + Nu)) = casadi::DM::reshape(Wdata->initial_guess.map((U_poly.d) * knot_num, "serial")(u_collocation_times).at(1), Nucol, 1);
             }
             if (!Wdata->lower_bound.is_null() && !Wdata->upper_bound.is_null())
             {
@@ -374,6 +349,47 @@ namespace galileo
                 general_ubw(casadi::Slice(Ndx, Ndx + Nuknot)) = casadi::DM::reshape(Wdata->upper_bound.map(knot_num + 1, "serial")(u_knot_times).at(1), Nuknot, 1);
                 general_lbw(casadi::Slice(Ndx + Nuknot, Ndx + Nu)) = casadi::DM::reshape(Wdata->lower_bound.map((U_poly.d) * knot_num, "serial")(u_collocation_times).at(1), Nucol, 1);
                 general_ubw(casadi::Slice(Ndx + Nuknot, Ndx + Nu)) = casadi::DM::reshape(Wdata->upper_bound.map((U_poly.d) * knot_num, "serial")(u_collocation_times).at(1), Nucol, 1);
+            }
+        }
+
+        void PseudospectralSegment::setInitialGuess(casadi::Function initial_guess_func)
+        {
+            int Ndxknot = st_m->ndx * (knot_num + 1);
+            int Ndx = st_m->ndx * (dX_poly.d + 1) * knot_num + st_m->ndx;
+            int Ndxcol = Ndx - Ndxknot;
+
+            int Nuknot = st_m->nu * (knot_num + 1);
+            int Nu = st_m->nu * (U_poly.d + 1) * knot_num + st_m->nu;
+            int Nucol = Nu - Nuknot;
+            w0 = casadi::DM::zeros(Ndx + Nu, 1);
+            general_lbw = -casadi::DM::inf(Ndx + Nu, 1);
+            general_ubw = casadi::DM::inf(Ndx + Nu, 1);
+
+            /*Transform initial guess for x to an initial guess for dx, using f_diff, the inverse of f_int*/
+            casadi::MX xkg_sym = casadi::MX::sym("xkg", st_m->nx, 1);
+            casadi::MX xckg_sym = casadi::MX::sym("Xckg", st_m->nx * dX_poly.d, 1);
+            if (!initial_guess_func.is_null())
+            {
+                casadi::DM xg = initial_guess_func.map(knot_num + 1, "serial")(knot_times).at(0);
+                casadi::Function dxg_func = casadi::Function("xg_fun", casadi::MXVector{xkg_sym}, casadi::MXVector{Fdiff(casadi::MXVector{x0_global, xkg_sym, 1.0}).at(0)})
+                                                .map(knot_num + 1, "serial");
+                w0(casadi::Slice(0, Ndxknot)) = casadi::DM::reshape(dxg_func(casadi::DMVector{xg}).at(0), Ndxknot, 1);
+                /*The transformation of xc to dxc is a slightly less trivial. While x_k = fint(x0_init, dx_k), for xc_k, we have xc_k = fint(x_k, dxc_k) which is equivalent to xc_k = fint(fint(x0_init, dx_k), dxc_k).
+                Thus, dxc_k = fdiff(fint(x0_init, dx_k), xc_k)). This could be done with maps like above, but it is not necessary.*/
+                casadi::DM xc_g = initial_guess_func.map((dX_poly.d) * knot_num, "serial")(collocation_times).at(0);
+                for (casadi_int i = 0; i < knot_num; ++i)
+                {
+                    casadi::DM xk = xg(casadi::Slice(i * st_m->nx, (i + 1) * st_m->nx));
+                    casadi::DM xck = xc_g(casadi::Slice(i * st_m->nx * dX_poly.d, (i + 1) * st_m->nx * dX_poly.d));
+                    for (casadi_int j = 0; j < dX_poly.d; ++j)
+                    {
+                        w0(casadi::Slice(Ndxknot + i * st_m->ndx * dX_poly.d + j * st_m->ndx, Ndxknot + i * st_m->ndx * dX_poly.d + (j + 1) * st_m->ndx)) =
+                            reshape(Fdiff(casadi::DMVector{xk, xck(casadi::Slice(j * st_m->nx, (j + 1) * st_m->nx)), h}).at(0), st_m->ndx, 1);
+                    }
+                }
+
+                w0(casadi::Slice(Ndx, Ndx + Nuknot)) = casadi::DM::reshape(initial_guess_func.map(knot_num + 1, "serial")(u_knot_times).at(1), Nuknot, 1);
+                w0(casadi::Slice(Ndx + Nuknot, Ndx + Nu)) = casadi::DM::reshape(initial_guess_func.map((U_poly.d) * knot_num, "serial")(u_collocation_times).at(1), Nucol, 1);
             }
         }
 

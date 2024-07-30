@@ -69,6 +69,9 @@ namespace galileo
              */
             void initializeExpressionGraph(std::vector<ConstraintData> G, std::shared_ptr<DecisionData> Wdata) override;
 
+            // Must be called after initialization
+            void setInitialGuess(casadi::Function initial_guess_func) override;
+
             /**
              * @brief Evaluate the expressions with the actual decision variables.
              *

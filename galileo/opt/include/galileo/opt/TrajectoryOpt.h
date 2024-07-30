@@ -176,9 +176,11 @@ namespace galileo
              */
             void initFiniteElements(int d, casadi::DM X0);
 
+            void setInitialGuess(casadi::Function initial_guess_func);
+
             /**
              * @brief Advance the finite elements.
-             * 
+             *
              * @param time_advance The time to advance the finite elements
              * @param X0 The new initial state
              * @param phase The next phase (we check if we actually need the next phase based on the time_advance)
@@ -349,6 +351,8 @@ namespace galileo
              *
              */
             IterationCallback callback;
+
+            bool initialized = false;
         };
 
         template <class ProblemData, class MODE_T>
@@ -448,7 +452,20 @@ namespace galileo
                     J += gp_data->Phi(casadi::MXVector{prev_final_state}).at(0);
                 }
             }
+            initialized = true;
             std::cout << "Finished initialization" << std::endl;
+        }
+
+        template <class ProblemData, class MODE_T>
+        void TrajectoryOpt<ProblemData, MODE_T>::setInitialGuess(casadi::Function initial_guess_func)
+        {
+            w0.clear();
+            for (size_t i = 0; i < trajectory.size(); ++i)
+            {
+                auto segment = trajectory[i];
+                segment->setInitialGuess(initial_guess_func);
+                segment->fill_w0(w0);
+            }
         }
 
         template <class ProblemData, class MODE_T>

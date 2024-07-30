@@ -316,6 +316,13 @@ namespace galileo
         {
             cost_params_.terminal_weight = new_k;
         }
+
+        void LeggedInterface::SetInitialGuess(casadi::Function initial_guess_func)
+        {
+            // Set the initial guess for the trajectory optimization
+            std::lock_guard<std::mutex> lock_traj(trajectory_opt_mutex_);
+            trajectory_opt_->setInitialGuess(initial_guess_func);
+        }
   
         LeggedInterface::CostParameters LeggedInterface::getCostParameters()
         {

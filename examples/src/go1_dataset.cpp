@@ -193,7 +193,6 @@ int main(int argc, char **argv)
         noisy_vec_r = noisy_vec_r.cwiseMax(min_value);
         noisy_k = std::max(min_value, noisy_k);
 
-\
         // std::cout << "Noisy Vector:\n" << noisy_vec_q.transpose() << std::endl;
 
         solver_interface.SetQDiag(noisy_vec_q);
@@ -223,6 +222,7 @@ int main(int argc, char **argv)
         // solver_interface.VisualizeSolutionAndConstraints(new_times, new_states, new_inputs);
         galileo::legged::LeggedInterface::CostParameters costParam = solver_interface.getCostParameters();
         casadi::Function solution = solver_interface.GetTrajectoryFunction();
+        solver_interface.SetInitialGuess(solution);
 
         std::string base_save_path = "../dataset/Solution_function_";
         std::string base_struct_path = "../dataset/CostParam_";

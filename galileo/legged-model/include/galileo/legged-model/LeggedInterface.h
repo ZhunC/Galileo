@@ -115,6 +115,7 @@ namespace galileo
              */
             
             void SetRDiag(const Eigen::VectorXd new_r_diag);
+
             /**
              * @brief Set the new r_diag to cost_params_
              * 
@@ -127,7 +128,8 @@ namespace galileo
              * 
              * @return Nothing. Modifies the protected variable cost_params_ 
              */
-            
+
+            void SetInitialGuess(casadi::Function initial_guess_func);
 
             CostParameters getCostParameters();
             /** 

@@ -104,6 +104,8 @@ namespace galileo
              */
             virtual void initializeExpressionGraph(std::vector<ConstraintData> G, std::shared_ptr<DecisionData> Wdata) = 0;
 
+            virtual void setInitialGuess(casadi::Function initial_guess_func) = 0;
+
             /**
              * @brief Evaluate the expressions with the actual decision variables.
              *
