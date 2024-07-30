@@ -6,7 +6,7 @@
 #include <vector>
 #include <sstream>
 #include <Eigen/Dense>
-#include <ctime>
+#include <chrono>
 
 std::vector<double> extractVector(const std::string &line)
 {
@@ -89,7 +89,7 @@ int main(int argc, char **argv)
 
     std::ifstream infile("/ros_ws/src/Galileo/resources/go1/Parameters/solver_parameters.txt");
     std::string line;
-    int dataset_size = 1;
+    int dataset_size = 100;
 
     if (infile.is_open())
     {
@@ -206,15 +206,15 @@ int main(int argc, char **argv)
 
 
         // Get the start time
-        std::clock_t start = std::clock();
+        auto start = std::chrono::system_clock::now();
 
         solver_interface.Update(X0, Xf);
         
         // Get the end time
-        std::clock_t end = std::clock();
+        auto end = std::chrono::system_clock::now();
 
         // Calculate the duration
-        double duration = double(end - start) / CLOCKS_PER_SEC;
+        std::chrono::duration<double, std::milli> duration = end - start;
 
         // Eigen::VectorXd new_times = Eigen::VectorXd::LinSpaced(250, 0., solver_interface.getRobotModel()->contact_sequence->getDT());
         // Eigen::MatrixXd new_states = Eigen::MatrixXd::Zero(solver_interface.states()->nx, new_times.size());
@@ -237,35 +237,34 @@ int main(int argc, char **argv)
         std::cout << solution << std::endl;
 
 
-        auto tmp = solution(casadi::DM(0.5));
-        std::cout << tmp[0] << std::endl;
-        std::cout << tmp[1] << std::endl;
+        casadi::DMVector tmp = solution(casadi::DM(0.5));
+        std::cout << "States: " << tmp[0] << std::endl;
+        std::cout << "Inputs: " << tmp[1] << std::endl;
 
         // back check
-        // casadi::Function loaded_func = casadi::Function::load(solution_save_path);
+        casadi::Function loaded_func = casadi::Function::load(solution_save_path);
 
         // Use the loaded function
-        // auto tmp_check = solution(casadi::DM(0.5));
-        // std::cout << tmp_check[0] << std::endl;
-        // std::cout << tmp_check[1] << std::endl;
+        auto tmp_check = solution(casadi::DM(0.5));
+        std::cout << tmp_check[0] << std::endl;
+        std::cout << tmp_check[1] << std::endl;
 
         // Open the file
         std::ofstream outFile(time_save_path);
 
         if (outFile.is_open()) {
             // Write the duration to the file
-            outFile << "Execution time: " << duration << " seconds" << std::endl;
+            outFile << "Execution time: " << duration.count() << " miliseconds" << std::endl;
 
             // Close the file
             outFile.close();
 
             std::cout << "Time recorded and saved to " << time_save_path << std::endl;
+            std::cout << "Time recorded time is " << duration.count() << "ms." << std::endl;
         } else {
             std::cerr << "Error opening file for writing: " << time_save_path << std::endl;
         }
-        casadi::DMVector tmp = solution(casadi::DM(0.5));
-        std::cout << "States: " << tmp[0] << std::endl;
-        std::cout << "Inputs: " << tmp[1] << std::endl;
+        
 
     }
 
