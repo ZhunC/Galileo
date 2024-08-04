@@ -16,4 +16,6 @@ constraints.ideal_footstep_duration|0.5|double
 
 
 solver|snopt|string
+nlp.snopt.Cold Start/Warm Start|Warm|string
+nlp.start|hot|string
 nlp.snopt.Major iterations limit|2500|int

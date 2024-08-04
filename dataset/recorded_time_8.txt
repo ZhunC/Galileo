@@ -1,1 +1,1 @@
-Execution time: 82673 miliseconds
+Execution time: 1190.68 miliseconds
