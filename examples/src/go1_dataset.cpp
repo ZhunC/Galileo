@@ -8,6 +8,7 @@
 #include <Eigen/Dense>
 #include <chrono>
 
+
 std::vector<double> extractVector(const std::string &line)
 {
     std::vector<double> result;
@@ -89,7 +90,7 @@ int main(int argc, char **argv)
 
     std::ifstream infile("/ros_ws/src/Galileo/resources/go1/Parameters/solver_parameters.txt");
     std::string line;
-    int dataset_size = 100;
+    int dataset_size = 5;
 
     if (infile.is_open())
     {
@@ -222,7 +223,7 @@ int main(int argc, char **argv)
         // solver_interface.VisualizeSolutionAndConstraints(new_times, new_states, new_inputs);
         galileo::legged::LeggedInterface::CostParameters costParam = solver_interface.getCostParameters();
         casadi::Function solution = solver_interface.GetTrajectoryFunction();
-        solver_interface.SetInitialGuess(solution);
+        
 
         std::string base_save_path = "../dataset/Solution_function_";
         std::string base_struct_path = "../dataset/CostParam_";
