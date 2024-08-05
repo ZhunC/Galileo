@@ -132,7 +132,7 @@ int main(int argc, char **argv)
     double sum = std::accumulate(knot_time.begin(), knot_time.end(), 0.0);
     int interpolation_num = 20;
     double step = sum / (interpolation_num - 1);
-    double total_percent_error = 0.0;
+    
     //std::cout << "step is " << step << std::endl;
     //std::cout << "knot time is " << knot_time << std::endl;
 
@@ -219,7 +219,7 @@ int main(int argc, char **argv)
                     << " took " << elapsed.count() << " miliseconds, whereas the original problem took "
                     <<  problems[problemIdx].solveTime << " miliseconds." << std::endl;
 
-
+            double total_percent_error = 0.0;
 
             for (int k = 0; k < interpolation_num; ++k) {
                 interpolation_point = k * step + 1e-5;
