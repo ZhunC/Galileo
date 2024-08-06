@@ -323,6 +323,13 @@ namespace galileo
             std::lock_guard<std::mutex> lock_traj(trajectory_opt_mutex_);
             trajectory_opt_->setInitialGuess(initial_guess_func);
         }
+
+        void LeggedInterface::SetInitialGuess(casadi::DM w0, casadi::DM lam_x0, casadi::DM lam_g0)
+        {
+            // Set the initial guess for the trajectory optimization
+            std::lock_guard<std::mutex> lock_traj(trajectory_opt_mutex_);
+            trajectory_opt_->setInitialGuess(w0, lam_x0, lam_g0);
+        }
   
         LeggedInterface::CostParameters LeggedInterface::getCostParameters()
         {

@@ -131,6 +131,8 @@ namespace galileo
 
             void SetInitialGuess(casadi::Function initial_guess_func);
 
+            void SetInitialGuess(casadi::DM w0, casadi::DM lam_x0, casadi::DM lam_g0);
+
             casadi::DM GetWSol();
 
             casadi::DM GetLamXSol();
