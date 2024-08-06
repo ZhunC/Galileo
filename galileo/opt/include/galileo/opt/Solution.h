@@ -253,7 +253,7 @@ namespace galileo
                  *
                  * @param solution_segments A vector of solution segments.
                  */
-                void UpdateSolution(std::vector<solution_segment_data_t> solution_segments);
+                void UpdateSolution(std::vector<solution_segment_data_t> solution_segments, casadi::DM w, casadi::DM lam_x, casadi::DM lam_g);
 
                 enum AccessSolutionError
                 {
@@ -344,6 +344,12 @@ namespace galileo
                  */
                 bool isSolutionSet() const { return !solution_segments_.empty(); }
 
+                casadi::DM getW() const { return w_; }
+
+                casadi::DM getLamX() const { return lam_x_; }
+
+                casadi::DM getLamG() const { return lam_g_; }
+
             private:
                 /**
                  * @brief The solution segments.
@@ -362,6 +368,12 @@ namespace galileo
                  *
                  */
                 std::shared_ptr<PseudospectralTrajectorySolution> trajectory_solution_;
+
+                casadi::DM w_;
+
+                casadi::DM lam_x_;
+
+                casadi::DM lam_g_;
             };
         }
     }

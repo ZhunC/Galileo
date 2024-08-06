@@ -289,7 +289,7 @@ namespace galileo
 
             std::lock_guard<std::mutex> lock_sol(solution_mutex_);
             //@todo Akshay5312, reevaluate thread safety
-            solution_interface_->UpdateSolution(trajectory_opt_->getSolutionSegments());
+            solution_interface_->UpdateSolution(trajectory_opt_->getSolutionSegments(), trajectory_opt_->get_w_sol(), trajectory_opt_->get_lam_x_sol(), trajectory_opt_->get_lam_g_sol());
 
             solution_interface_->UpdateConstraints(trajectory_opt_->getConstraintDataSegments());
         }
@@ -333,6 +333,24 @@ namespace galileo
         {
             std::lock_guard<std::mutex> lock_sol(solution_mutex_);
             return solution_interface_->GetTrajectoryFunction();
+        }
+
+        casadi::DM LeggedInterface::GetWSol()
+        {
+        std::lock_guard<std::mutex> lock_sol(solution_mutex_);
+        return solution_interface_->getW();
+        }
+
+        casadi::DM LeggedInterface::GetLamXSol()
+        {
+        std::lock_guard<std::mutex> lock_sol(solution_mutex_);
+        return solution_interface_->getLamX();
+        }
+
+        casadi::DM LeggedInterface::GetLamGSol()
+        {
+        std::lock_guard<std::mutex> lock_sol(solution_mutex_);
+        return solution_interface_->getLamG();
         }
 
         void LeggedInterface::VisualizeSolutionAndConstraints(const Eigen::VectorXd &query_times, Eigen::MatrixXd &state_result, Eigen::MatrixXd &input_result)

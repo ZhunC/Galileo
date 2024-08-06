@@ -6,10 +6,13 @@ namespace galileo
     {
         namespace solution
         {
-            void Solution::UpdateSolution(std::vector<solution_segment_data_t> solution_segments)
+            void Solution::UpdateSolution(std::vector<solution_segment_data_t> solution_segments, casadi::DM w, casadi::DM lam_x, casadi::DM lam_g)
             {
                 solution_segments_ = solution_segments;
                 trajectory_solution_ = std::make_shared<PseudospectralTrajectorySolution>(solution_segments_);
+                w_ = w;
+                lam_x_ = lam_x;
+                lam_g_ = lam_g;
             }
 
             // state_result and input_result should be initialized to the correct size before calling GetSolution!
