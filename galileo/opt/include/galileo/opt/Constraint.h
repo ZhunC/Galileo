@@ -24,10 +24,11 @@ namespace galileo
              * @param Fdiff_ Continuous-time function. The ineverse function of Fint. This is used to generate the initial guess for the states.
              * @param Phi_ Terminal cost
              */
-            GeneralProblemData(casadi::Function Fint_, casadi::Function Fdiff_, casadi::Function Phi_)
+            GeneralProblemData(casadi::Function Fint_, casadi::Function Fdiff_, casadi::Function F_state_error_, casadi::Function Phi_)
             {
                 this->Fint = Fint_;
                 this->Fdiff = Fdiff_;
+                this->F_state_error = F_state_error_;
                 this->Phi = Phi_;
             }
 
@@ -44,6 +45,8 @@ namespace galileo
              *
              */
             casadi::Function Fdiff;
+
+            casadi::Function F_state_error;
 
             /**
              * @brief The terminal cost function.

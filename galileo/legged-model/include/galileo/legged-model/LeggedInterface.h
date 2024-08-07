@@ -43,6 +43,7 @@ namespace galileo
                 Eigen::VectorXd Q_diag;
                 Eigen::VectorXd R_diag;
                 double terminal_weight = 1.0;
+                bool use_terminal_constraint_instead_of_cost = false;
             };
 
             /**
@@ -138,6 +139,8 @@ namespace galileo
             casadi::DM GetLamXSol();
 
             casadi::DM GetLamGSol();
+
+            casadi::DM GetFSol();
 
             CostParameters getCostParameters();
             /**

@@ -8,7 +8,6 @@
 #include <Eigen/Dense>
 #include <chrono>
 
-
 std::vector<double> extractVector(const std::string &line)
 {
     std::vector<double> result;
@@ -62,17 +61,41 @@ double extractDouble(const std::string &line)
 void saveCostParam(const std::string &filename, const galileo::legged::LeggedInterface::CostParameters &CP)
 {
     std::ofstream file(filename);
-    if (file.is_open())
+    if (!file.is_open())
     {
-        file << CP.Q_diag.transpose() << std::endl;
-        file << CP.R_diag.transpose() << std::endl;
-        file << CP.terminal_weight << std::endl;
-        file.close();
+        std::cerr << "Unable to open file" << std::endl;
+        return;
     }
-    else
+
+    // Set the precision for floating-point output
+    file << std::fixed << std::setprecision(64);
+
+    // Write Q_diag to the first line
+    for (int i = 0; i < CP.Q_diag.size(); ++i)
     {
-        throw std::runtime_error("Unable to open file for writing struct.");
+        file << CP.Q_diag[i];
+        if (i < CP.Q_diag.size() - 1)
+        {
+            file << ",";
+        }
     }
+    file << std::endl;
+
+    // Write R_diag to the second line
+    for (int i = 0; i < CP.R_diag.size(); ++i)
+    {
+        file << CP.R_diag[i];
+        if (i < CP.R_diag.size() - 1)
+        {
+            file << ",";
+        }
+    }
+    file << std::endl;
+
+    // Write k to the third line
+    file << CP.terminal_weight << std::endl;
+
+    file.close();
 }
 
 int main(int argc, char **argv)
@@ -84,13 +107,50 @@ int main(int argc, char **argv)
 
     std::vector<double> q0_vec;
     std::vector<double> qf_vec;
+
+    galileo::legged::helper::ReadProblemFromParameterFile(problem_parameter_location,
+                                                          end_effector_names,
+                                                          knot_num,
+                                                          knot_time,
+                                                          contact_surfaces,
+                                                          q0_vec,
+                                                          qf_vec);
+
+    galileo::legged::LeggedInterface solver_interface;
+
+    solver_interface.LoadModel(robot_location, end_effector_names);
+    solver_interface.LoadParameters(solver_parameter_location);
+
+    int nx = solver_interface.states()->nx;
+    int q_idx = solver_interface.states()->q_index;
+
+    casadi::DM X0;
+    std::vector<double> X0_vec = galileo::legged::helper::getXfromq(solver_interface.states()->nx, q_idx, q0_vec);
+    galileo::tools::vectorToCasadi(X0_vec, nx, 1, X0);
+
+    casadi::DM Xf;
+    std::vector<double> Xf_vec = galileo::legged::helper::getXfromq(solver_interface.states()->nx, q_idx, qf_vec);
+    galileo::tools::vectorToCasadi(Xf_vec, nx, 1, Xf);
+
+    solver_interface.addSurface(environment::createInfiniteGround());
+
+    std::vector<uint> mask_vec = galileo::legged::helper::getMaskVectorFromContactSurfaces(contact_surfaces);
+
+    solver_interface.setContactSequence(
+        knot_num,
+        knot_time,
+        mask_vec,
+        contact_surfaces);
+
+    solver_interface.Initialize(X0, Xf);
+
     Eigen::VectorXd test_q_diag(24);
     Eigen::VectorXd test_r_diag(24);
     double test_k;
 
-    std::ifstream infile("/ros_ws/src/Galileo/resources/go1/Parameters/solver_parameters.txt");
+    std::ifstream infile(solver_parameter_location);
     std::string line;
-    int dataset_size = 5;
+    int dataset_size = 1;
 
     if (infile.is_open())
     {
@@ -124,45 +184,10 @@ int main(int argc, char **argv)
 
     // Random number generator for noise
     std::random_device rd;
-    std::mt19937 gen(rd());
+    unsigned int seed = 1;
+    std::mt19937 gen(seed);
 
     std::normal_distribution<> d(0, 1); // Mean 0, standard deviation 1
-
-
-    galileo::legged::helper::ReadProblemFromParameterFile(problem_parameter_location,
-                                                          end_effector_names,
-                                                          knot_num,
-                                                          knot_time,
-                                                          contact_surfaces,
-                                                          q0_vec,
-                                                          qf_vec);
-
-    galileo::legged::LeggedInterface solver_interface;
-
-    solver_interface.LoadModel(robot_location, end_effector_names);
-    solver_interface.LoadParameters(solver_parameter_location);
-    int nx = solver_interface.states()->nx;
-    int q_idx = solver_interface.states()->q_index;
-
-    casadi::DM X0;
-    std::vector<double> X0_vec = galileo::legged::helper::getXfromq(solver_interface.states()->nx, q_idx, q0_vec);
-    galileo::tools::vectorToCasadi(X0_vec, nx, 1, X0);
-
-    casadi::DM Xf;
-    std::vector<double> Xf_vec = galileo::legged::helper::getXfromq(solver_interface.states()->nx, q_idx, qf_vec);
-    galileo::tools::vectorToCasadi(Xf_vec, nx, 1, Xf);
-
-    solver_interface.addSurface(environment::createInfiniteGround());
-
-    std::vector<uint> mask_vec = galileo::legged::helper::getMaskVectorFromContactSurfaces(contact_surfaces);
-
-    solver_interface.setContactSequence(
-        knot_num,
-        knot_time,
-        mask_vec,
-        contact_surfaces);
-
-    solver_interface.Initialize(X0, Xf);
 
     for (int i = 0; i < dataset_size; ++i)
     {
@@ -185,7 +210,6 @@ int main(int argc, char **argv)
         double noise_k = d(gen) * magnitude_k * noise_factor;
         noisy_k = test_k + noise_k;
 
-
         // Define the minimum value
         double min_value = 1e-9;
 
@@ -204,12 +228,11 @@ int main(int argc, char **argv)
         std::cout << "Q: " << noisy_vec_q.transpose() << std::endl;
         std::cout << "R: " << noisy_vec_r.transpose() << std::endl;
 
-
         // Get the start time
         auto start = std::chrono::system_clock::now();
 
         solver_interface.Update(X0, Xf);
-        
+
         // Get the end time
         auto end = std::chrono::system_clock::now();
 
@@ -223,20 +246,38 @@ int main(int argc, char **argv)
         // solver_interface.VisualizeSolutionAndConstraints(new_times, new_states, new_inputs);
         galileo::legged::LeggedInterface::CostParameters costParam = solver_interface.getCostParameters();
         casadi::Function solution = solver_interface.GetTrajectoryFunction();
-        
+        casadi::DM raw_w = solver_interface.GetWSol();
+        casadi::DM raw_lam_x = solver_interface.GetLamXSol();
+        casadi::DM raw_lam_g = solver_interface.GetLamGSol();
+
+        Eigen::MatrixXd w;
+        Eigen::MatrixXd lam_x;
+        Eigen::MatrixXd lam_g;
+        tools::casadiToEigen(raw_w, w);
+        tools::casadiToEigen(raw_lam_x, lam_x);
+        tools::casadiToEigen(raw_lam_g, lam_g);
+
+        double total_cost = solver_interface.GetFSol().get_elements()[0];
 
         std::string base_save_path = "../dataset/Solution_function_";
         std::string base_struct_path = "../dataset/CostParam_";
         std::string base_time_path = "../dataset/recorded_time_";
+        std::string base_cost_path = "../dataset/recorded_cost_";
+        std::string base_primal_w_path = "../dataset/primal_w_solution_";
+        std::string base_dual_lam_x_path = "../dataset/dual_lam_x_solution_";
+        std::string base_dual_lam_g_path = "../dataset/dual_lam_g_solution_";
         std::string solution_save_path = base_save_path + std::to_string(i) + ".casadi";
         std::string costparam_save_path = base_struct_path + std::to_string(i) + ".txt";
         std::string time_save_path = base_time_path + std::to_string(i) + ".txt";
+        std::string cost_save_path = base_cost_path + std::to_string(i) + ".txt";
+        std::string primal_w_save_path = base_primal_w_path + std::to_string(i) + ".txt";
+        std::string dual_lam_x_save_path = base_dual_lam_x_path + std::to_string(i) + ".txt";
+        std::string dual_lam_g_save_path = base_dual_lam_g_path + std::to_string(i) + ".txt";
 
         solution.save(solution_save_path);
         saveCostParam(costparam_save_path, costParam);
         std::cout << "Results saved in: " << costparam_save_path << std::endl;
         std::cout << solution << std::endl;
-
 
         casadi::DMVector tmp = solution(casadi::DM(0.5));
         std::cout << "States: " << tmp[0] << std::endl;
@@ -250,23 +291,68 @@ int main(int argc, char **argv)
         std::cout << tmp_check[0] << std::endl;
         std::cout << tmp_check[1] << std::endl;
 
-        // Open the file
-        std::ofstream outFile(time_save_path);
+        std::ofstream timeFile(time_save_path);
 
-        if (outFile.is_open()) {
+        if (timeFile.is_open())
+        {
             // Write the duration to the file
-            outFile << "Execution time: " << duration.count() << " miliseconds" << std::endl;
+            timeFile << "Execution time: " << duration.count() << " miliseconds" << std::endl;
 
             // Close the file
-            outFile.close();
+            timeFile.close();
 
             std::cout << "Time recorded and saved to " << time_save_path << std::endl;
             std::cout << "Time recorded time is " << duration.count() << "ms." << std::endl;
-        } else {
+        }
+        else
+        {
             std::cerr << "Error opening file for writing: " << time_save_path << std::endl;
         }
-        
 
+        std::ofstream costFile(cost_save_path);
+
+        if (costFile.is_open())
+        {
+            // Write the duration to the file
+            costFile << "Total cost is: " << total_cost << std::endl;
+
+            // Close the file
+            costFile.close();
+
+            std::cout << "Total cost recorded and saved to " << cost_save_path << std::endl;
+            std::cout << "Total recorded cost is " << total_cost << std::endl;
+        }
+        else
+        {
+            std::cerr << "Error opening file for writing: " << cost_save_path << std::endl;
+        }
+
+        std::ofstream w_file(primal_w_save_path);
+        if (w_file.is_open())
+        {
+            // Set the precision for floating-point output
+            w_file << std::fixed << std::setprecision(64);
+            w_file << w.transpose().format(Eigen::IOFormat(Eigen::StreamPrecision, Eigen::DontAlignCols, ",", "\n"));
+            w_file.close();
+        }
+
+        std::ofstream lam_x_file(dual_lam_x_save_path);
+        if (lam_x_file.is_open())
+        {
+            // Set the precision for floating-point output
+            lam_x_file << std::fixed << std::setprecision(64);
+            lam_x_file << lam_x.transpose().format(Eigen::IOFormat(Eigen::StreamPrecision, Eigen::DontAlignCols, ",", "\n"));
+            lam_x_file.close();
+        }
+
+        std::ofstream lam_g_file(dual_lam_g_save_path);
+        if (lam_g_file.is_open())
+        {
+            // Set the precision for floating-point output
+            lam_g_file << std::fixed << std::setprecision(64);
+            lam_g_file << lam_g.transpose().format(Eigen::IOFormat(Eigen::StreamPrecision, Eigen::DontAlignCols, ",", "\n"));
+            lam_g_file.close();
+        }
     }
 
     return 0;

@@ -154,6 +154,12 @@ namespace galileo
                 std::cout << "Terminal weight: " << cost_params_.terminal_weight << std::endl;
             }
 
+            if (imported_vars.find("cost.use_terminal_constraint_instead_of_cost") != imported_vars.end())
+            {
+                cost_params_.use_terminal_constraint_instead_of_cost = (std::get<0>(imported_vars["cost.use_terminal_constraint_instead_of_cost"])) == "true";
+                std::cout << "Using terminal constraint instead of a terminal cost: " << cost_params_.use_terminal_constraint_instead_of_cost << std::endl;
+            }
+
             if (imported_vars.find("solver") != imported_vars.end())
                 solver_type_ = std::get<0>(imported_vars["solver"]);
 
@@ -167,7 +173,7 @@ namespace galileo
 
             CreateCost(initial_state, target_state, Phi);
 
-            std::shared_ptr<opt::GeneralProblemData> gp_data = std::make_shared<opt::GeneralProblemData>(robot_->fint, robot_->fdiff, Phi);
+            std::shared_ptr<opt::GeneralProblemData> gp_data = std::make_shared<opt::GeneralProblemData>(robot_->fint, robot_->fdiff, robot_->f_state_error, Phi);
 
             problem_data_ = std::make_shared<LeggedRobotProblemData>(gp_data,
                                                                      surfaces_,
@@ -276,7 +282,7 @@ namespace galileo
 
             std::lock_guard<std::mutex> lock(trajectory_opt_mutex_);
 
-            trajectory_opt_ = std::make_shared<LeggedTrajOpt>(problem_data_, robot_->contact_sequence, constraint_builders, decision_builder_, opts_, solver_type_);
+            trajectory_opt_ = std::make_shared<LeggedTrajOpt>(problem_data_, robot_->contact_sequence, constraint_builders, decision_builder_, cost_params_.use_terminal_constraint_instead_of_cost, opts_, solver_type_);
         }
 
         void LeggedInterface::Update(const T_ROBOT_STATE &initial_state, const T_ROBOT_STATE &target_state)
@@ -289,7 +295,7 @@ namespace galileo
 
             std::lock_guard<std::mutex> lock_sol(solution_mutex_);
             //@todo Akshay5312, reevaluate thread safety
-            solution_interface_->UpdateSolution(trajectory_opt_->getSolutionSegments(), trajectory_opt_->get_w_sol(), trajectory_opt_->get_lam_x_sol(), trajectory_opt_->get_lam_g_sol());
+            solution_interface_->UpdateSolution(trajectory_opt_->getSolutionSegments(), trajectory_opt_->get_w_sol(), trajectory_opt_->get_lam_x_sol(), trajectory_opt_->get_lam_g_sol(), trajectory_opt_->get_f_sol());
 
             solution_interface_->UpdateConstraints(trajectory_opt_->getConstraintDataSegments());
         }
@@ -303,12 +309,22 @@ namespace galileo
         void LeggedInterface::SetQDiag(const Eigen::VectorXd new_q_diag)
         {
             assert(new_q_diag.size() == cost_params_.Q_diag.size());
+            if (new_q_diag.size() != cost_params_.Q_diag.size())
+            {
+                std::cerr << "New Q_diag size does not match the current Q_diag size" << std::endl;
+                return;
+            }
             cost_params_.Q_diag = new_q_diag;
         }
 
         void LeggedInterface::SetRDiag(const Eigen::VectorXd new_r_diag)
         {
             assert(new_r_diag.size() == cost_params_.R_diag.size());
+            if (new_r_diag.size() != cost_params_.R_diag.size())
+            {
+                std::cerr << "New R_diag size does not match the current R_diag size" << std::endl;
+                return;
+            }
             cost_params_.R_diag = new_r_diag;
         }
 
@@ -358,6 +374,12 @@ namespace galileo
         {
         std::lock_guard<std::mutex> lock_sol(solution_mutex_);
         return solution_interface_->getLamG();
+        }
+
+        casadi::DM LeggedInterface::GetFSol()
+        {
+        std::lock_guard<std::mutex> lock_sol(solution_mutex_);
+        return solution_interface_->getF();
         }
 
         void LeggedInterface::VisualizeSolutionAndConstraints(const Eigen::VectorXd &query_times, Eigen::MatrixXd &state_result, Eigen::MatrixXd &input_result)
@@ -411,7 +433,7 @@ namespace galileo
             problem_data_->gp_data->Phi = Phi;
 
             std::lock_guard<std::mutex> lock(trajectory_opt_mutex_);
-            trajectory_opt_->initFiniteElements(1, initial_state);
+            trajectory_opt_->initFiniteElements(1, initial_state, target_state);
         }
 
     }
