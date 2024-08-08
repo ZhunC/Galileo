@@ -106,9 +106,9 @@ int main(int argc, char **argv)
     std::vector<double> q0_vec;
     std::vector<double> qf_vec;
 
-    int dataset_size = 100;
-    int numProblems = dataset_size;
-    int numSolutions = dataset_size;
+    int dataset_size = 3;
+    int numProblems = 100;
+    int numSolutions = 100;
     // int numSolutions = 5;
     DataRow output; 
 
@@ -183,15 +183,16 @@ int main(int argc, char **argv)
     // int testidx = 0;
     // std::cout << problems[testidx].solution(casadi::DM(0.5)) << std::endl;
 
-    for (int problemIdx = 0; problemIdx < numProblems; ++problemIdx) {
-        
+    //for (int problemIdx = 0; problemIdx < numProblems; ++problemIdx) {
+    for (int problemIdx = 0; problemIdx < 3; ++problemIdx) { 
         solver_interface.SetQDiag(problems[problemIdx].Q);
         solver_interface.SetRDiag(problems[problemIdx].R);
         solver_interface.SetK(problems[problemIdx].K);
 
-
-        for (int solutionIdx = 0; solutionIdx < numSolutions; ++solutionIdx) {
-
+        for (int solutionIdx = 0; solutionIdx < 3; ++solutionIdx) {
+       // for (int solutionIdx = 0; solutionIdx < numSolutions; ++solutionIdx) {
+            //problemIdx = 49;
+            //solutionIdx = 49;
             double interpolation_point;
             casadi::DMVector prev_sol;
             casadi::DMVector curr_sol;
