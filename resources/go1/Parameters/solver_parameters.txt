@@ -3,6 +3,7 @@ Variable Name|Value|Type
 cost.Q_diag|(15, 15, 100, 10, 30, 30, 1000, 1000, 1500, 100, 300, 300, 5, 5, 2.5, 5, 5, 2.5, 5, 5, 2.5, 5, 5, 2.5)|vector
 cost.R_diag|(1e-3, 1e-3, 1e-3, 1e-3, 1e-3, 1e-3, 1e-3, 1e-3, 1e-3, 1e-3, 1e-3, 1e-3, 75, 75, 5, 75, 75, 5, 75, 75, 5, 75, 75, 5)|vector
 cost.terminal_weight|1e3|double
+cost.use_terminal_constraint_instead_of_cost|false|bool
 
 constraints.mu|0.7|double
 constraints.normal_force_max|80|double

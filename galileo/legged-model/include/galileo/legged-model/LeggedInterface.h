@@ -43,6 +43,7 @@ namespace galileo
                 Eigen::VectorXd Q_diag;
                 Eigen::VectorXd R_diag;
                 double terminal_weight = 1.0;
+                bool use_terminal_constraint_instead_of_cost = false;
             };
 
             /**
@@ -103,38 +104,48 @@ namespace galileo
 
             /**
              * @brief Returns the trajectory as a function of time in Casadi form.
-             * 
+             *
              * @return casadi::Function The solution trajectory function
              */
-            
+
             void SetQDiag(const Eigen::VectorXd new_q_diag);
             /**
              * @brief Set the new q_diag to cost_params_
-             * 
-             * @return Nothing. Modifies the protected variable cost_params_ 
+             *
+             * @return Nothing. Modifies the protected variable cost_params_
              */
-            
+
             void SetRDiag(const Eigen::VectorXd new_r_diag);
 
             /**
              * @brief Set the new r_diag to cost_params_
-             * 
-             * @return Nothing. Modifies the protected variable cost_params_ 
+             *
+             * @return Nothing. Modifies the protected variable cost_params_
              */
 
             void SetK(const double new_k);
             /**
              * @brief Set the new k to cost_params_
-             * 
-             * @return Nothing. Modifies the protected variable cost_params_ 
+             *
+             * @return Nothing. Modifies the protected variable cost_params_
              */
 
             void SetInitialGuess(casadi::Function initial_guess_func);
 
+            void SetInitialGuess(casadi::DM w0, casadi::DM lam_x0, casadi::DM lam_g0);
+
+            casadi::DM GetWSol();
+
+            casadi::DM GetLamXSol();
+
+            casadi::DM GetLamGSol();
+
+            casadi::DM GetFSol();
+
             CostParameters getCostParameters();
-            /** 
+            /**
              * @brief Returns the protected variable cost_params_
-             * 
+             *
              * @return Ccost_params_
              */
 
