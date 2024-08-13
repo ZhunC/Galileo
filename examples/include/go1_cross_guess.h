@@ -17,6 +17,9 @@ using namespace constraints;
 using namespace tools;
 using namespace math;
 
+using LeggedTrajOpt = galileo::opt::TrajectoryOpt<LeggedRobotProblemData, galileo::legged::contact::ContactMode>;
+
+
 struct Problem {
     int ID;
     Eigen::VectorXd Q;
@@ -44,6 +47,6 @@ struct DataRow {
 const std::string robot_location = "../resources/go1/urdf/go1.urdf";
 // const std::string solver_parameter_location = "../resources/go1/Parameters/solver_parameters.txt";
 const std::string solver_parameter_location = "../resources/go1/Parameters/solver_parameters_snopt.txt";
-const std::string problem_parameter_location = "../resources/go1/Parameters/problem_parameters.txt";
+const std::string problem_parameter_location = "../resources/go1/Parameters/problem_param_standing.txt";
 const std::string data_location = "../dataset/";
 const std::string csv_location = "../dataset/results.csv";

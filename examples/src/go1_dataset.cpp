@@ -150,7 +150,7 @@ int main(int argc, char **argv)
 
     std::ifstream infile(solver_parameter_location);
     std::string line;
-    int dataset_size = 50;
+    int dataset_size = 5;
 
     if (infile.is_open())
     {

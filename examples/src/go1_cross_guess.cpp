@@ -5,6 +5,7 @@
 #include <vector>
 #include <sstream>
 
+
 std::vector<double> readDoublesFromFile(const std::string& filePath) {
     std::vector<double> numbers;
     std::ifstream file(filePath);
@@ -240,7 +241,7 @@ int main(int argc, char **argv)
 
     solver_interface.Initialize(X0, Xf);
 
-    int dataset_size = 50;
+    int dataset_size = 5;
     int numProblems = dataset_size;
     int numSolutions = dataset_size;
     DataRow output;
@@ -276,7 +277,9 @@ int main(int argc, char **argv)
         tools::vectorToCasadi(lam_x_vec, lam_x_vec.size(), 1, problems[i].lam_x);
         tools::vectorToCasadi(lam_g_vec, lam_g_vec.size(), 1, problems[i].lam_g);
     }
-
+    auto tmp_check = problems[0].solution(casadi::DM(1.5));
+        std::cout << tmp_check[0] << std::endl;
+        std::cout << tmp_check[1] << std::endl;
 
     for (int problemIdx = 0; problemIdx < numProblems; ++problemIdx)
     {
@@ -311,8 +314,13 @@ int main(int argc, char **argv)
             solver_interface.Update(X0, Xf);
             auto end = std::chrono::system_clock::now();
             std::chrono::duration<double, std::milli> elapsed = end - start;
+
+
+
+
             casadi::Function curr_solution_func = solver_interface.GetTrajectoryFunction();
             double curr_cost = solver_interface.GetFSol().get_elements()[0];
+
 
             // Print the timing information (for demonstration purposes)
             std::cout << "Problem " << problemIdx << " with solution " << solutionIdx
@@ -357,6 +365,7 @@ int main(int argc, char **argv)
 
             std::cout << "New solution has a similarity score of " << output.similarityScore << std::endl;
             std::cout << "Original solution had cost of " << problems[problemIdx].cost << " and the new solution has cost of " << curr_cost << std::endl;
+
 
             
        // }

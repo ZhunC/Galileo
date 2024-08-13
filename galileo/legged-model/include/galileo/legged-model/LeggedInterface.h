@@ -46,6 +46,7 @@ namespace galileo
                 bool use_terminal_constraint_instead_of_cost = false;
             };
 
+
             /**
              * @brief Load the model from a file.
              */

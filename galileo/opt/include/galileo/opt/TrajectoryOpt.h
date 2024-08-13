@@ -54,6 +54,9 @@ namespace galileo
              */
             casadi::Sparsity lam_p_;
 
+            std::vector<double> running_cost;
+            std::vector<int> iteration_numbers;
+
             /**
              * @brief Construct a new Iteration Callback object.
              *
@@ -117,10 +120,12 @@ namespace galileo
              * @param arg The arguments to the callback function
              * @return std::vector<casadi::DM> The result of the callback function
              */
+
             std::vector<casadi::DM> eval(const std::vector<casadi::DM> &arg) const override
             {
                 return std::vector<casadi::DM>{0};
             }
+
 
             /**
              * @brief Get the sparsity of the input at index i.
