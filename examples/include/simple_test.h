@@ -7,6 +7,7 @@
 
 using namespace galileo;
 using namespace opt;
+using namespace solution;
 using namespace tools;
 
 struct SimpleProblemData
